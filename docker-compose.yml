@@ -1,0 +1,119 @@
+# Local development stack
+# Usage:
+#   docker compose up          → start all services
+#   docker compose up rag      → start only the RAG app (you manage monitoring separately)
+#   docker compose --profile monitoring up  → start RAG + Prometheus + Grafana + Redis
+
+version: "3.9"
+
+services:
+  # ── RAG Application ──────────────────────────────────────────────────────────
+  rag:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: rag-on-gcp:local
+    container_name: rag_app
+    ports:
+      - "8080:8080"
+    environment:
+      - ENVIRONMENT=local
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GCP_REGION=${GCP_REGION:-us-central1}
+      - GCS_BUCKET_NAME=${GCS_BUCKET_NAME}
+      - VERTEX_AI_LOCATION=${VERTEX_AI_LOCATION:-us-central1}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-004}
+      - LLM_MODEL=${LLM_MODEL:-gemini-1.5-pro-002}
+      - CHROMA_PERSIST_DIR=/tmp/chroma_data
+      - CHROMA_SYNC_TO_GCS=false  # disable in local dev
+      - REDIS_URL=redis://redis:6379
+      - METRICS_ENABLED=true
+      # Mount ADC credentials for local GCP access
+      - GOOGLE_APPLICATION_CREDENTIALS=/gcp/credentials.json
+    volumes:
+      - ./app:/app/app:ro  # Hot-reload source
+      - chroma_data:/tmp/chroma_data
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/gcp/credentials.json:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/api/v1/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    command: >
+      uvicorn app.main:app
+        --host 0.0.0.0
+        --port 8080
+        --reload
+        --log-config /dev/null
+
+  # ── Redis (Query Cache) ───────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: rag_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Prometheus ────────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    container_name: rag_prometheus
+    profiles: ["monitoring"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    restart: unless-stopped
+    depends_on:
+      - rag
+
+  # ── Grafana ───────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: rag_grafana
+    profiles: ["monitoring"]
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_LOG_LEVEL=warn
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+volumes:
+  chroma_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:

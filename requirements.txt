@@ -1,0 +1,55 @@
+# FastAPI & Server
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+gunicorn==23.0.0
+python-multipart==0.0.12
+
+# Pydantic (settings + models)
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# Google Cloud
+google-cloud-storage==2.18.2
+google-cloud-aiplatform==1.68.0
+google-cloud-logging==3.11.2
+google-cloud-tasks==2.16.5
+vertexai==1.68.0
+
+# PDF Processing
+pymupdf==1.24.11
+pypdf==5.0.1
+pdfplumber==0.11.4
+
+# LangChain
+langchain==0.3.7
+langchain-google-vertexai==2.0.5
+langchain-community==0.3.7
+langchain-chroma==0.1.4
+
+# Vector Store
+chromadb==0.5.18
+
+# Async & Concurrency
+anyio==4.6.2
+httpx==0.27.2
+aiofiles==24.1.0
+
+# Monitoring & Metrics
+prometheus-client==0.21.0
+prometheus-fastapi-instrumentator==7.0.0
+opentelemetry-api==1.27.0
+opentelemetry-sdk==1.27.0
+opentelemetry-exporter-gcp-trace==1.8.0
+
+# Structured Logging
+structlog==24.4.0
+python-json-logger==2.0.7
+
+# Caching
+redis==5.1.1
+
+# Utilities
+tenacity==9.0.0
+python-dotenv==1.0.1
+tiktoken==0.8.0
+numpy==1.26.4

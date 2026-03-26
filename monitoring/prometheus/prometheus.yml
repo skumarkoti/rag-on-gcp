@@ -1,0 +1,37 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    service: rag-on-gcp
+    environment: local
+
+rule_files:
+  - "alerts.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+scrape_configs:
+  # ── RAG Application ──────────────────────────────────────────────────────────
+  - job_name: rag_app
+    static_configs:
+      - targets:
+          - rag:8080
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # ── Prometheus itself ────────────────────────────────────────────────────────
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090
+
+  # ── Redis ─────────────────────────────────────────────────────────────────────
+  # Uncomment if you add redis_exporter
+  # - job_name: redis
+  #   static_configs:
+  #     - targets:
+  #         - redis_exporter:9121
