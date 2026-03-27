@@ -1,0 +1,35 @@
+# Copy this file to terraform.tfvars and fill in your values
+# cp terraform.tfvars.example terraform.tfvars
+
+project_id  = "your-gcp-project-id"
+region      = "us-central1"
+environment = "production"
+app_name    = "rag-on-gcp"
+image_tag   = "latest"
+
+# Cloud Run scaling (handles 20-50 concurrent users)
+# 2 min instances × 25 concurrency = 50 concurrent users guaranteed
+cloud_run_min_instances = 2
+cloud_run_max_instances = 10
+cloud_run_cpu           = "2000m"
+cloud_run_memory        = "4Gi"
+cloud_run_concurrency   = 25
+cloud_run_timeout       = 300
+
+# Vertex AI
+vertex_ai_location = "us-central1"
+embedding_model    = "text-embedding-004"
+llm_model          = "gemini-1.5-pro-002"
+
+# Storage
+gcs_location      = "US"
+gcs_storage_class = "STANDARD"
+
+# Redis caching
+enable_redis         = true
+redis_memory_size_gb = 1
+
+# Monitoring
+enable_grafana   = true
+grafana_password = "ChangeMe123!"   # Set a strong password!
+alert_email      = "you@example.com"
